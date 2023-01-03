@@ -5,28 +5,32 @@ pipeline {
         aws_credential = "AWS_CREDNETIAL_ID"
         repo_url = "MyRepositoryUrl"
         region = "MyAwsRegion"
+        DataInFile = ""
     }
     stages{
         
-        stage('checkout') {
+        stage('Load Script from Github') {
             steps {
+                git branch:"${BRANCH_NAME}", credentialsId: "${git_credential}", url: "http://${repo_url}"
                 script {
-                    git branch:"${BRANCH_NAME}", credentialsId: "${git_credential}", url: "http://${repo_url}"
-                    commitId = sh (script: 'git rev-parse --short HEAD ${GIT_COMMIT}', returnStdout: true).trim()
-                }
+                   DataInFile = readFile(file: './TestFile.txt')
+                   println(DataInFile)
+               }
             }
         }
 
         stage("Upload to EC2"){
             steps{
-                withAWS(region:"${region}", credentials:"${aws_credential}){
+                    withAWS(region:"${region}", credentials:"${aws_credential}){
 
-                    sh '''
-                    #!/bin/bash
-                    mkdir /home/ec2-user/GithubFiles
-                    cp ./DirectoryA_1/README.txt ./GithubFiles
-                    '''
-                }    
+                        sh '''
+
+                        #!/bin/bash
+                        mkdir /home/ec2-user/GithubFiles
+                        scp -i ~/Desktop/amazon.pem ~/Desktop/TestFile.txt  ubuntu@ec2-54-166-128-20.compute-1.amazonaws.com:~/GithubFiles/
+
+                        '''
+                    }   
             }
 
     }
